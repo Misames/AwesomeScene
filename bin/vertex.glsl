@@ -3,7 +3,7 @@ attribute vec4 a_position;
 attribute vec3 a_normal;
 
 // Matrice de modification
-uniform float u_time; 
+uniform float u_time;
 uniform mat4 u_rotationMatrix;
 uniform mat4 u_translationMatrix;
 uniform mat4 u_projectionMatrix;

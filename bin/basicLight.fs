@@ -13,14 +13,14 @@ float Diffuse(const vec3 n, const vec3 l)
 
 const vec3 L = normalize(vec3(0.0, 0.0, 1.0));
 
-void main(void) 
+void main(void)
 {
     // v_normal a "subi" un lerp, il faut renormaliser le vecteur
     vec3 N = normalize(v_normal);
     float lambert = Diffuse(N, L);
 
     vec4 texcolor = texture2D(u_sampler, v_texcoords);
- 
+
     gl_FragColor = vec4(vec3(lambert), 1.0) * texcolor;
     //gl_FragColor = texcolor;
 }

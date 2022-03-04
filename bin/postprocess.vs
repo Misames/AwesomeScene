@@ -1,5 +1,4 @@
 attribute vec2 a_Position;
-
 varying vec2 v_TexCoords;
 
 void main()
