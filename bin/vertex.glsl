@@ -8,6 +8,8 @@ uniform mat4 u_rotationMatrix;
 uniform mat4 u_translationMatrix;
 uniform mat4 u_projectionMatrix;
 
+uniform mat4 u_view;
+
 varying vec3 v_normal;
 
 // Texture

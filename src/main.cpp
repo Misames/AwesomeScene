@@ -3,9 +3,13 @@
 #elif defined(__linux__)
 #endif
 
+#define M_PI 3.14159265358979323846
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
+#include <gtc/type_ptr.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -24,8 +28,9 @@ using namespace tinyobj;
 // Window
 int width, height;
 
-// Sahder
+// Shader
 GLShader myShader;
+GLShader SkyboxShader;
 
 // Model 3D
 attrib_t attribs;
@@ -35,6 +40,12 @@ vector<float> listData;
 string warm, err;
 bool ret = LoadObj(&attribs, &shapes, &materials, &warm, &err, "wolf.obj", "", true, false);
 int indexVertex = 0;
+
+// VAO , VBO et IBO de la skybox
+GLuint SkyboxVAO;	// la structure d'attributs stockee en VRAM
+GLuint SkyboxVBO;	// les vertices de l'objet stockees en VRAM
+GLuint SkyboxIBO;	// les indices de l'objet stockees en VRAM
+
 
 void Initialize()
 {
@@ -49,6 +60,10 @@ void Initialize()
     myShader.LoadVertexShader("vertex.glsl");
     myShader.LoadFragmentShader("fragment.glsl");
     myShader.Create();
+
+    SkyboxShader.LoadVertexShader("SkyboxCubemap.vs");
+    SkyboxShader.LoadFragmentShader("SkyboxCubemap.fs");
+    SkyboxShader.Create();
 
     //////////////////////////////////////////////////////////////////////////////////////////
     /////////////////                                                        /////////////////
@@ -92,7 +107,7 @@ void Initialize()
     /////////////////                  CHARGER UNE TEXTURE                   /////////////////
     /////////////////                                                        /////////////////
     //////////////////////////////////////////////////////////////////////////////////////////
-    uint8_t *data = stbi_load("127.jpg", &width, &height, nullptr, STBI_rgb_alpha);
+    uint8_t *data = stbi_load("brick.png", &width, &height, nullptr, STBI_rgb_alpha);
     GLuint textureid;
 
     glGenTextures(1, &textureid);
@@ -111,11 +126,114 @@ void Initialize()
         stbi_image_free(data);
     }
     //////////////////////////////////////////////////////////////////////////////////////////
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////                                                        /////////////////
+    /////////////////                  SKYBOX                                /////////////////
+    /////////////////                                                        /////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////
+
+    float Skybox[] =
+    {
+    -1.0f,-1.0f,1.0f,
+    1.0f,-1.0f,1.0f,
+    1.0f,-1.0f,-1.0f,
+    -1.0f,-1.0f,-1.0f,
+    -1.0f,1.0f,1.0f,
+    1.0f,1.0f,1.0f,
+    1.0f,1.0f,-1.0f,
+    -1.0f,1.0f,-1.0f
+    };
+    
+    unsigned int SkyboxIndices[] =
+    {
+
+    // Droite
+	1, 2, 6,
+	6, 5, 1,
+	// Gauche
+	0, 4, 7,
+	7, 3, 0,
+	// Haut
+	4, 5, 6,
+	6, 7, 4,
+	// Bas
+	0, 3, 2,
+	2, 1, 0,
+	// Derriere
+	0, 1, 5,
+	5, 4, 0,
+	// Devant
+	3, 7, 6,
+	6, 2, 3
+    };
+
+
+    glGenVertexArrays(1,&SkyboxVAO);
+    glGenBuffers(1,&SkyboxVAO);
+    glGenBuffers(1,&SkyboxVBO);
+    glGenBuffers(1,&SkyboxIBO);
+    glBindVertexArray(SkyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER,SkyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER,sizeof(Skybox),&Skybox,GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,SkyboxIBO);
+    glBufferData(GL_ARRAY_BUFFER,sizeof(SkyboxIndices),&SkyboxIndices,GL_STATIC_DRAW);
+    glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER,0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+
+    string PathFace[] = {
+
+        "pisa_posx.jpg",
+        "pisa_negx.jpg",
+        "pisa_posy.jpg",
+        "pisa_negy.jpg",
+        "pisa_posz.jpg",
+        "pisa_negz.jpg"
+
+    };
+
+    GLuint cubeMapText;
+    glGenTextures(1, &cubeMapText);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapText);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE); 
+    glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_WRAP_R,GL_CLAMP_TO_EDGE);
+
+
+    for (int i =0 ; i<6 ;i++){
+          int width, height ,nrChannels;
+        unsigned char* data = stbi_load(PathFace[i].c_str(),&width,&height,&nrChannels,0);
+        if(data){
+            stbi_set_flip_vertically_on_load(false);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i , 0, GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,data);
+            stbi_image_free(data);
+
+        }
+        else {
+            cout << "erreur chargement d'une images de cubemap"<< endl;
+        }
+    }
+  
+
+
+
+
+
+
 }
+
+   
+
 
 void Shutdown()
 {
     myShader.Destroy();
+    SkyboxShader.Destroy();
 }
 
 void Display(GLFWwindow *window)
@@ -170,7 +288,7 @@ void Display(GLFWwindow *window)
     };
 
     const int rotationLocation = glGetUniformLocation(basicProgram, "u_rotationMatrix");
-    glUniformMatrix4fv(rotationLocation, 1, GL_FALSE, rotationMatrix);
+    glUniformMatrix4fv(rotationLocation, 1, GL_FALSE, rotationMatrix); 
 
     float translationMatrix[] = {
         1.0f, 0.0f, 0.0f, 0.0f,            // 1ere colonne
@@ -212,6 +330,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
+
+
 int main()
 {
     GLFWwindow *window;
@@ -227,12 +347,14 @@ int main()
         return -1;
     }
 
+
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
     Initialize();
 
     while (!glfwWindowShouldClose(window))
     {
+    
         Display(window);
         glfwSwapBuffers(window);
         glfwPollEvents();
