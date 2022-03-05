@@ -21,5 +21,6 @@ void main(void)
     v_texcoords = a_texcoords;
     mat4 worldMatrix = u_translationMatrix * u_rotationMatrix;
     v_normal = mat3(worldMatrix) * a_normal;
-    gl_Position = u_projectionMatrix * worldMatrix * a_position;
+    // gl_Position = u_projectionMatrix * worldMatrix * a_position;
+    gl_Position = u_projectionMatrix * a_position;
 }
