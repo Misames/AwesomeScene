@@ -1,5 +1,3 @@
-
-// #include "stdafx.h"
 #include "GLShader.h"
 #include <GL/glew.h>
 

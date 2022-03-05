@@ -1,9 +1,10 @@
+#define M_PI 3.14159265358979323846
 #if defined(_WIN32) && defined(_MSC_VER)
 #elif defined(__APPLE__)
 #elif defined(__linux__)
 #endif
 
-#define M_PI 3.14159265358979323846
+#include <iostream>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -16,16 +17,12 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-#include <iostream>
-#include <cmath>
-
+#include "Camera.hpp"
 #include "GLShader.h"
-#include "Vertex.hpp"
 
 using namespace std;
 using namespace tinyobj;
 
-// Window
 int width, height;
 
 // Shader
@@ -217,7 +214,7 @@ void Shutdown()
     SkyboxShader.Destroy();
 }
 
-void Display(GLFWwindow *window)
+void Display(GLFWwindow *window, Camera cam)
 {
 
     glfwGetWindowSize(window, &width, &height);
@@ -277,6 +274,7 @@ void Display(GLFWwindow *window)
         0.0f, 0.0f, 1.0f, 0.0f,            // 3eme colonne
         cosf(time), -100.0f, -350.0f, 1.0f // 4eme colonne
     };
+
     const int translationLocation = glGetUniformLocation(basicProgram, "u_translationMatrix");
     glUniformMatrix4fv(translationLocation, 1, GL_FALSE, translationMatrix);
 
@@ -287,16 +285,14 @@ void Display(GLFWwindow *window)
     float znear = 0.1f, zfar = 1000.0f;
     float cot = 1.0f / tanf(radianFov / 2.0f);
 
-    float projectionMatrix[] = {
+    /* float projectionMatrix[] = {
         cot / aspect, 0.0f, 0.0f, 0.0f,                           // 1ere colonne
         0.0f, cot, 0.0f, 0.0f,                                    // 2eme colonne
         0.0f, 0.0f, -(znear + zfar) / (zfar - znear), -1.0f,      // 3eme colonne
         0.0f, 0.0f, -(2.0f * znear * zfar) / (zfar - znear), 0.0f // 4eme colonne
-    };
+    };*/
 
-    const int projectionLocation = glGetUniformLocation(basicProgram, "u_projectionMatrix");
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, projectionMatrix);
-
+    cam.Matrix(fov, znear, 1000.f, myShader, "u_projectionMatrix");
     glDrawArrays(GL_TRIANGLES, listData[0], indexVertex);
 }
 
@@ -330,10 +326,12 @@ int main()
     glfwSetKeyCallback(window, key_callback);
     Initialize();
 
+    Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
+
     while (!glfwWindowShouldClose(window))
     {
-
-        Display(window);
+        camera.Inputs(window);
+        Display(window, camera);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
