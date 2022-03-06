@@ -1,8 +1,8 @@
 #ifndef CAMERA_CLASS_HPP
 #define CAMERA_CLASS_HPP
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <glew.h>
+#include <glfw3.h>
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>

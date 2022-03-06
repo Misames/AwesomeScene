@@ -6,8 +6,8 @@
 
 #include <iostream>
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <glew.h>
+#include <glfw3.h>
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
 #include <gtc/type_ptr.hpp>
@@ -36,7 +36,7 @@ vector<shape_t> shapes;
 vector<material_t> materials;
 vector<float> listData;
 string warm, err;
-bool ret = LoadObj(&attribs, &shapes, &materials, &warm, &err, "model/wolf.obj", "", true, false);
+bool ret = LoadObj(&attribs, &shapes, &materials, &warm, &err, "models/wolf.obj", "", true, false);
 int indexVertex = 0;
 
 // VAO , VBO et IBO de la skybox
