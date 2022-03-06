@@ -38,6 +38,7 @@ vector<float> listData;
 string warm, err;
 bool ret = LoadObj(&attribs, &shapes, &materials, &warm, &err, "models/wolf.obj", "", true, false);
 int indexVertex = 0;
+GLuint textureid;
 
 // VAO , VBO et IBO de la skybox
 GLuint skyboxVAO; // la structure d'attributs stockee en VRAM
@@ -46,6 +47,8 @@ GLuint skyboxIBO; // les indices de l'objet stockees en VRAM
 
 // Framebuffer
 GLuint FBO;
+GLuint ColorBufferFBO; // stocke les couleurs du rendu hors ecran
+GLuint DepthBufferFBO; // stocke les Z du rendu hors ecran
 
 void Initialize()
 {
@@ -107,7 +110,6 @@ void Initialize()
     /////////////////                                                        /////////////////
     //////////////////////////////////////////////////////////////////////////////////////////
     uint8_t *data = stbi_load("img/brick.png", &width, &height, nullptr, STBI_rgb_alpha);
-    GLuint textureid;
 
     glGenTextures(1, &textureid);
     glActiveTexture(GL_TEXTURE0);
@@ -182,10 +184,32 @@ void Initialize()
     /////////////////                                                        /////////////////
     //////////////////////////////////////////////////////////////////////////////////////////
 
-    // Gestion du framebuffer FBO
+    // --- FBO ----
+
     glGenFramebuffers(1, &FBO);
+    // attache une texture comme color buffer
+
+    glGenTextures(1, &ColorBufferFBO);
+    glBindTexture(GL_TEXTURE_2D, ColorBufferFBO);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 100, 100, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    // attache une texture comme depth buffer
+    glGenTextures(1, &DepthBufferFBO);
+    glBindTexture(GL_TEXTURE_2D, DepthBufferFBO);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 100, 100, 0,
+                 GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+
+    // bind FBO + attache la texture que l'on vient de creer
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // rétablie le FBO par défaut
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D, ColorBufferFBO, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                           GL_TEXTURE_2D, DepthBufferFBO, 0);
+    assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     string PathFace[] =
         {"img/pisa_posx.jpg",
@@ -224,17 +248,46 @@ void Shutdown()
     mainShader.Destroy();
     skyboxShader.Destroy();
     glDeleteFramebuffers(1, &FBO);
+
+    glDeleteTextures(1, &ColorBufferFBO);
+    glDeleteTextures(1, &DepthBufferFBO);
+    glDeleteFramebuffers(1, &FBO);
 }
 
 void Display(GLFWwindow *window, Camera cam)
 {
+    ///////////////////////  FBO  //////////////////////
+    // Setup
     int offscreenWidth = 100, offscreenHeight = 100;
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
     glViewport(0, 0, offscreenWidth, offscreenHeight);
+    glBindTexture(GL_TEXTURE_2D, ColorBufferFBO);
+    glBindTexture(GL_TEXTURE_2D, DepthBufferFBO);
+    glDepthMask(GL_TRUE);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+
+    // Operation vers le framebuffer
+    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Fin des opérations du Framebuffer
+    glDepthMask(GL_FALSE);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    /////////////  Framebuffer par défaut  /////////////
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glfwGetWindowSize(window, &width, &height);
+
+    glViewport(0, 0, width, height);
     glClearColor(0.5f, 0.5f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT);
+    glEnable(GL_CULL_FACE);
 
+    glBindTexture(GL_TEXTURE_2D, textureid);
     uint32_t basicProgram = mainShader.GetProgram();
     glUseProgram(basicProgram);
 
@@ -283,17 +336,18 @@ void Display(GLFWwindow *window, Camera cam)
     cam.Matrix(fov, znear, zfar, mainShader, "u_projectionMatrix");
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glfwGetWindowSize(window, &width, &height);
+
     glViewport(0, 0, width, height);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT);
-    glClearColor(1.f, 1.f, 0.f, 1.f);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, FBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBlitNamedFramebuffer(GL_READ_FRAMEBUFFER, GL_DRAW_FRAMEBUFFER,
                            0, 0, 100, 100,
                            0, 0, width, height,
                            GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
     glDrawArrays(GL_TRIANGLES, listData[0], indexVertex);
 }
 
