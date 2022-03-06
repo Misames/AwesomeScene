@@ -23,25 +23,26 @@
 using namespace std;
 using namespace tinyobj;
 
+// Texture
 int width, height;
 
 // Shader
-GLShader myShader;
-GLShader SkyboxShader;
+GLShader mainShader;
+GLShader skyboxShader;
 
-// Model 3D
+// Model
 attrib_t attribs;
 vector<shape_t> shapes;
 vector<material_t> materials;
 vector<float> listData;
 string warm, err;
-bool ret = LoadObj(&attribs, &shapes, &materials, &warm, &err, "wolf.obj", "", true, false);
+bool ret = LoadObj(&attribs, &shapes, &materials, &warm, &err, "model/wolf.obj", "", true, false);
 int indexVertex = 0;
 
 // VAO , VBO et IBO de la skybox
-GLuint SkyboxVAO; // la structure d'attributs stockee en VRAM
-GLuint SkyboxVBO; // les vertices de l'objet stockees en VRAM
-GLuint SkyboxIBO; // les indices de l'objet stockees en VRAM
+GLuint skyboxVAO; // la structure d'attributs stockee en VRAM
+GLuint skyboxVBO; // les vertices de l'objet stockees en VRAM
+GLuint skyboxIBO; // les indices de l'objet stockees en VRAM
 
 void Initialize()
 {
@@ -53,13 +54,13 @@ void Initialize()
     cout << "Vendor : " << glGetString(GL_VENDOR) << endl;
     cout << "Renderer : " << glGetString(GL_RENDERER) << endl;
 
-    myShader.LoadVertexShader("vertex.glsl");
-    myShader.LoadFragmentShader("fragment.glsl");
-    myShader.Create();
+    mainShader.LoadVertexShader("shader/vertex.glsl");
+    mainShader.LoadFragmentShader("shader/fragment.glsl");
+    mainShader.Create();
 
-    SkyboxShader.LoadVertexShader("SkyboxCubemap.vs");
-    SkyboxShader.LoadFragmentShader("SkyboxCubemap.fs");
-    SkyboxShader.Create();
+    skyboxShader.LoadVertexShader("shader/SkyboxCubemap.vs");
+    skyboxShader.LoadFragmentShader("shader/SkyboxCubemap.fs");
+    skyboxShader.Create();
 
     //////////////////////////////////////////////////////////////////////////////////////////
     /////////////////                                                        /////////////////
@@ -96,14 +97,13 @@ void Initialize()
             indexVertex += fv;
         }
     }
-    //////////////////////////////////////////////////////////////////////////////////////////
 
     //////////////////////////////////////////////////////////////////////////////////////////
     /////////////////                                                        /////////////////
     /////////////////                  CHARGER UNE TEXTURE                   /////////////////
     /////////////////                                                        /////////////////
     //////////////////////////////////////////////////////////////////////////////////////////
-    uint8_t *data = stbi_load("brick.png", &width, &height, nullptr, STBI_rgb_alpha);
+    uint8_t *data = stbi_load("img/pink_galaxy.jpg", &width, &height, nullptr, STBI_rgb_alpha);
     GLuint textureid;
 
     glGenTextures(1, &textureid);
@@ -112,8 +112,10 @@ void Initialize()
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_NEAREST_MIPMAP_NEAREST);
 
     if (data)
     {
@@ -121,7 +123,6 @@ void Initialize()
         glGenerateMipmap(GL_TEXTURE_2D);
         stbi_image_free(data);
     }
-    //////////////////////////////////////////////////////////////////////////////////////////
 
     //////////////////////////////////////////////////////////////////////////////////////////
     /////////////////                                                        /////////////////
@@ -159,14 +160,14 @@ void Initialize()
          3, 7, 6,
          6, 2, 3};
 
-    glGenVertexArrays(1, &SkyboxVAO);
-    glGenBuffers(1, &SkyboxVAO);
-    glGenBuffers(1, &SkyboxVBO);
-    glGenBuffers(1, &SkyboxIBO);
-    glBindVertexArray(SkyboxVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, SkyboxVBO);
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glGenBuffers(1, &skyboxIBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(Skybox), &Skybox, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, SkyboxIBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxIBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(SkyboxIndices), &SkyboxIndices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
@@ -174,13 +175,13 @@ void Initialize()
     glBindVertexArray(0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-    string PathFace[] = {
-        "pisa_posx.jpg",
-        "pisa_negx.jpg",
-        "pisa_posy.jpg",
-        "pisa_negy.jpg",
-        "pisa_posz.jpg",
-        "pisa_negz.jpg"};
+    string PathFace[] =
+        {"img/pisa_posx.jpg",
+         "img/pisa_negx.jpg",
+         "img/pisa_posy.jpg",
+         "img/pisa_negy.jpg",
+         "img/pisa_posz.jpg",
+         "img/pisa_negz.jpg"};
 
     GLuint cubeMapText;
     glGenTextures(1, &cubeMapText);
@@ -202,16 +203,14 @@ void Initialize()
             stbi_image_free(data);
         }
         else
-        {
             cout << "erreur chargement d'une images de cubemap" << endl;
-        }
     }
 }
 
 void Shutdown()
 {
-    myShader.Destroy();
-    SkyboxShader.Destroy();
+    mainShader.Destroy();
+    skyboxShader.Destroy();
 }
 
 void Display(GLFWwindow *window, Camera cam)
@@ -222,42 +221,30 @@ void Display(GLFWwindow *window, Camera cam)
     glClearColor(0.5f, 0.5f, 0.5f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    uint32_t basicProgram = myShader.GetProgram();
+    uint32_t basicProgram = mainShader.GetProgram();
     glUseProgram(basicProgram);
 
-    // rappel: stride du dragon = 8 * sizeof(float)
-    const GLint POSITION = glGetAttribLocation(basicProgram, "a_position");
-    glEnableVertexAttribArray(POSITION);
-    glVertexAttribPointer(POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, &listData[0]);
+    const GLint position = glGetAttribLocation(basicProgram, "a_position");
+    glEnableVertexAttribArray(position);
+    glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, &listData[0]);
 
     const GLint texAttrib = glGetAttribLocation(basicProgram, "a_texcoords");
     glEnableVertexAttribArray(texAttrib);
     glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, &listData[0]);
 
-    // static const int NORMAL = 1; // retro-ingenieurisez moi !
-    // une valeur de -1 indique que le location n'existe pas
-    const int NORMAL = glGetAttribLocation(basicProgram, "a_normal");
+    const int normal = glGetAttribLocation(basicProgram, "a_normal");
 
     static const int stride = sizeof(float) * 8;
 
-    glEnableVertexAttribArray(NORMAL);
-    // pour forcer la meme valeur a chaque sommet on utiliserait plutot
-    // glVertexAttrib3f(NORMAL, 1.f, 1.f, 0.f);
-    glVertexAttribPointer(NORMAL, 3, GL_FLOAT, false, stride, &listData[0]);
+    glEnableVertexAttribArray(normal);
+    glVertexAttribPointer(normal, 3, GL_FLOAT, false, stride, &listData[0]);
 
-    // si le parametre de glUseProgram() vaut zero
-    // on desactive les shaders
-    // toujours appeler cette fonction avant les glDraw***
     glUseProgram(basicProgram);
 
-    // on passe les uniform-s ici:
-    // ici 1 float (1f)
     float time = glfwGetTime();
     const int timeLocation = glGetUniformLocation(basicProgram, "u_time");
     glUniform1f(timeLocation, time);
 
-    // tout en mat4
-    // Rotation autour de l'axe forward
     float rotationMatrix[] = {
         cosf(time), 0.f, -sinf(time), 0.0f, // 1ere colonne
         0.0f, 1.0f, 0.0f, 0.f,              // 2eme colonne
@@ -278,21 +265,9 @@ void Display(GLFWwindow *window, Camera cam)
     const int translationLocation = glGetUniformLocation(basicProgram, "u_translationMatrix");
     glUniformMatrix4fv(translationLocation, 1, GL_FALSE, translationMatrix);
 
-    // fov=45°, aspect-ratio=width/height, znear=0.1, zfar=1000.0
-    float fov = 45.0f;
-    float radianFov = fov * (float)(M_PI / 180.0);
-    float aspect = (float)width / (float)height;
-    float znear = 0.1f, zfar = 1000.0f;
-    float cot = 1.0f / tanf(radianFov / 2.0f);
+    float znear = 0.1f, zfar = 1000.0f, fov = 45.0f;
+    cam.Matrix(fov, znear, zfar, mainShader, "u_projectionMatrix");
 
-    /* float projectionMatrix[] = {
-        cot / aspect, 0.0f, 0.0f, 0.0f,                           // 1ere colonne
-        0.0f, cot, 0.0f, 0.0f,                                    // 2eme colonne
-        0.0f, 0.0f, -(znear + zfar) / (zfar - znear), -1.0f,      // 3eme colonne
-        0.0f, 0.0f, -(2.0f * znear * zfar) / (zfar - znear), 0.0f // 4eme colonne
-    };*/
-
-    cam.Matrix(fov, znear, 1000.f, myShader, "u_projectionMatrix");
     glDrawArrays(GL_TRIANGLES, listData[0], indexVertex);
 }
 
