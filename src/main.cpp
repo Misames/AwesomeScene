@@ -43,6 +43,41 @@ GLuint SkyboxVAO; // la structure d'attributs stockee en VRAM
 GLuint SkyboxVBO; // les vertices de l'objet stockees en VRAM
 GLuint SkyboxIBO; // les indices de l'objet stockees en VRAM
 
+// coordonées du cube de
+float Skybox[] =
+        {-1.0f, -1.0f, 1.0f,
+         1.0f, -1.0f, 1.0f,
+         1.0f, -1.0f, -1.0f,
+         -1.0f, -1.0f, -1.0f,
+         -1.0f, 1.0f, 1.0f,
+         1.0f, 1.0f, 1.0f,
+         1.0f, 1.0f, -1.0f,
+         -1.0f, 1.0f, -1.0f};
+
+    unsigned int SkyboxIndices[] =
+        {// Droite
+         1, 2, 6,
+         6, 5, 1,
+         // Gauche
+         0, 4, 7,
+         7, 3, 0,
+         // Haut
+         4, 5, 6,
+         6, 7, 4,
+         // Bas
+         0, 3, 2,
+         2, 1, 0,
+         // Derriere
+         0, 1, 5,
+         5, 4, 0,
+         // Devant
+         3, 7, 6,
+         6, 2, 3};
+
+
+
+
+
 void Initialize()
 {
     GLenum error = glewInit();
@@ -131,35 +166,8 @@ void Initialize()
     /////////////////                                                        /////////////////
     //////////////////////////////////////////////////////////////////////////////////////////
 
-    float Skybox[] =
-        {-1.0f, -1.0f, 1.0f,
-         1.0f, -1.0f, 1.0f,
-         1.0f, -1.0f, -1.0f,
-         -1.0f, -1.0f, -1.0f,
-         -1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f, -1.0f,
-         -1.0f, 1.0f, -1.0f};
 
-    unsigned int SkyboxIndices[] =
-        {// Droite
-         1, 2, 6,
-         6, 5, 1,
-         // Gauche
-         0, 4, 7,
-         7, 3, 0,
-         // Haut
-         4, 5, 6,
-         6, 7, 4,
-         // Bas
-         0, 3, 2,
-         2, 1, 0,
-         // Derriere
-         0, 1, 5,
-         5, 4, 0,
-         // Devant
-         3, 7, 6,
-         6, 2, 3};
+    
 
     glGenVertexArrays(1, &SkyboxVAO);
     glGenBuffers(1, &SkyboxVAO);
@@ -172,8 +180,8 @@ void Initialize()
     glBufferData(GL_ARRAY_BUFFER, sizeof(SkyboxIndices), &SkyboxIndices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     string PathFace[] = {
@@ -200,7 +208,7 @@ void Initialize()
         if (data)
         {
             stbi_set_flip_vertically_on_load(false);
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
             stbi_image_free(data);
         }
         else
@@ -332,6 +340,13 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
+
+        SkyboxShader.LoadFragmentShader("SKyboxCubemap.fs");
+        SkyboxShader.LoadVertexShader("SKyboxCubemap.fs");
+        SkyboxShader.Create();
+        glUseProgram(SkyboxShader.GetProgram());
+        glUniform1f(glGetUniformLocation(SkyboxShader.GetProgram(),"skybox"),0);
+
         camera.Inputs(window);
         Display(window, camera);
         glfwSwapBuffers(window);
