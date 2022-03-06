@@ -43,6 +43,10 @@ GLuint SkyboxVAO; // la structure d'attributs stockee en VRAM
 GLuint SkyboxVBO; // les vertices de l'objet stockees en VRAM
 GLuint SkyboxIBO; // les indices de l'objet stockees en VRAM
 
+// Framebuffer
+GLuint FBO;
+
+
 void Initialize()
 {
     GLenum error = glewInit();
@@ -159,6 +163,7 @@ void Initialize()
          3, 7, 6,
          6, 2, 3};
 
+    // Gestion des buffers skybox
     glGenVertexArrays(1, &SkyboxVAO);
     glGenBuffers(1, &SkyboxVAO);
     glGenBuffers(1, &SkyboxVBO);
@@ -173,6 +178,18 @@ void Initialize()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////                                                        /////////////////
+    /////////////////                  FRAMEBUFFER                           /////////////////
+    /////////////////                                                        /////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////
+
+    // Gestion du framebuffer FBO
+    glGenFramebuffers(1, &FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // rétablie le FBO par défaut
+    
 
     string PathFace[] = {
         "pisa_posx.jpg",
@@ -212,15 +229,19 @@ void Shutdown()
 {
     myShader.Destroy();
     SkyboxShader.Destroy();
+	glDeleteFramebuffers(1, &FBO);
 }
 
 void Display(GLFWwindow *window, Camera cam)
 {
 
-    glfwGetWindowSize(window, &width, &height);
-    glViewport(0, 0, width, height);
-    glClearColor(0.5f, 0.5f, 0.5f, 1.f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    
+    int offscreenWidth = 100, offscreenHeight = 100;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glViewport(0, 0, offscreenWidth, offscreenHeight);
+    glClearColor(0.f,0.5f,0.5f,0.5f);
+    
 
     uint32_t basicProgram = myShader.GetProgram();
     glUseProgram(basicProgram);
@@ -291,7 +312,23 @@ void Display(GLFWwindow *window, Camera cam)
         0.0f, 0.0f, -(znear + zfar) / (zfar - znear), -1.0f,      // 3eme colonne
         0.0f, 0.0f, -(2.0f * znear * zfar) / (zfar - znear), 0.0f // 4eme colonne
     };*/
+    
 
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glfwGetWindowSize(window, &width, &height);
+
+    glViewport(0, 0, width, height);
+    glClearColor(1.f, 1.f, 0.f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, FBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glBlitNamedFramebuffer(GL_READ_FRAMEBUFFER,GL_DRAW_FRAMEBUFFER,
+        0,0,100,100,
+        0,0,width,height,
+        GL_COLOR_BUFFER_BIT,GL_LINEAR);
+        
     cam.Matrix(fov, znear, 1000.f, myShader, "u_projectionMatrix");
     glDrawArrays(GL_TRIANGLES, listData[0], indexVertex);
 }
